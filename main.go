@@ -1,53 +1,31 @@
 package main
 
 import (
-	"errors"
-	"time"
+	"fmt"
+	"todolist/internal"
 )
 
-type Task struct {
-	Name		string
-	Completed	bool
-	CreatedAt	time.Time
-}
-
-type TaskSlice []Task
-
-func (t *TaskSlice) Create(taskName string) {
-	newTask := Task{
-		Name: taskName,
-		Completed: false,
-		CreatedAt: time.Now(),
-	}
-	*t = append(*t, newTask)
-	// return nil
-}
-
-func (t *TaskSlice) Complete(taskIndex int) error {
-	if taskIndex <= 0 || taskIndex > len(*t) {
-		return errors.New("invalid task id")
-	}
-	(*t)[taskIndex].Completed = true
-	return nil
-}
-
-func (t *TaskSlice) Edit(taskIndex int, newName string) error {
-	if taskIndex <= 0 || taskIndex > len(*t) {
-		return errors.New("invalid task id")
-	} else if newName == "" {
-		return errors.New("invalid task name")
-	}
-	(*t)[taskIndex].Name = newName
-	return nil
-}
-
-func (t *TaskSlice) Delete(taskIndex int) error {
-	if taskIndex <= 0 || taskIndex > len(*t) {
-		return errors.New("invalid task id")
-	}
-	*t = append((*t)[:taskIndex-1], (*t)[taskIndex:]...)
-	return nil
-}
-
 func main() {
+	var todolist internal.Todolist
+	// todolist.Create("swimming")
+	// todolist.Create("walk the dog")
+	// todolist.Create("go shopping")
+	// todolist.Complete(1)
+	todolist.ReadFromFile("monday.tdl.json")
+
+	for i, task := range todolist {
+		fmt.Println(i, task.Name, task.Completed)
+	}
+	// todolist.Edit(2, "get groceries")
+	// fmt.Println("-----------------")
+	// todolist.Create("shop")
+	// for i, task := range todolist {
+	// 	fmt.Println(i, task.Name, task.Completed)
+	// }
+	// fmt.Println("-----------------")
+	// todolist.Delete(2)
+	// for i, task := range todolist {
+	// 	fmt.Println(i, task.Name, task.Completed)
+	// }
+	// todolist.Store("monday.tdl.json")
 }

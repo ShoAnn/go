@@ -47,7 +47,7 @@ func (t *Todolist) ReadFromFile(filePath string) error {
 }
 
 func (t *Todolist) Complete(taskIndex int) error {
-	if taskIndex <= 0 || taskIndex > len(*t) {
+	if taskIndex < 0 || taskIndex > len(*t) {
 		return errors.New("invalid task id")
 	}
 	(*t)[taskIndex].Completed = true

@@ -20,7 +20,7 @@ var createCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		list := &internal.Todolist{}
 		filePath := "main.tdl.json"
-		if err := list.ReadFromFile(filePath); err == nil {
+		if err := list.ReadFromFile(filePath); err != nil {
 			fmt.Fprintln(os.Stderr, "error reading file:", err)
 			os.Exit(1)
 		}

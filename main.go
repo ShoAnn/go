@@ -1,6 +1,9 @@
 package main
 
+import "todolist/cmd"
+
 func main() {
+	cmd.Execute()
 	// var todolist internal.Todolist
 	// todolist.Create("swimming")
 	// todolist.Create("walk the dog")

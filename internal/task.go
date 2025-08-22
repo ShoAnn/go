@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"fmt"
 	"time"
 )
 
@@ -64,10 +65,8 @@ func (t *Todolist) Edit(taskIndex int, newName string) error {
 	return nil
 }
 
-
 func (t *Todolist) Delete(taskIndex int) error {
-
-	if taskIndex <= 0 || taskIndex > len(*t) {
+	if taskIndex < 0 || taskIndex > len(*t) {
 		return errors.New("invalid task id")
 	}
 	*t = append((*t)[:taskIndex], (*t)[taskIndex+1:]...)

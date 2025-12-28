@@ -1,15 +1,26 @@
 services:
   db:
     image: postgres:18.1-alpine3.22
+    container_name: postgres_db
     restart: always
     environment:
-      POSTGRES_DB: todolist
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
+      # These match the keys in your .env file
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "5432:5432"
+      - "${DB_EXTERNAL_PORT}:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
+
+  adminer:
+    image: adminer
+    container_name: adminer_ui
+    restart: always
+    ports:
+      - "${ADMINER_EXTERNAL_PORT}:8080"
+    depends_on:
+      - db
 
 volumes:
-  pgdata:
+  postgres_data:

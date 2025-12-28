@@ -1,9 +1,14 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/joho/godotenv"
+	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -28,9 +33,23 @@ var (
 )
 
 func main() {
+	// setup env
+	// setup db conn
 	// define mux
 	// define routes
 	// start server
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	dbpool, err := pgxpool.New(context.Background(), os.Getenv("POSTGRES_URL"))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to create connection pool: %v\n", err)
+		os.Exit(1)
+	}
+	defer dbpool.Close()
+
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /tasks", getAllTasks)

@@ -1,0 +1,7 @@
+CREATE TABLE tasks (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR (50) UNIQUE NOT NULL,
+    completed BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);

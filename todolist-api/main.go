@@ -48,6 +48,8 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Unable to create connection pool: %v\n", err)
 		os.Exit(1)
 	}
+
+	fmt.Println("Database ping successful!")
 	defer dbpool.Close()
 
 	mux := http.NewServeMux()
@@ -59,7 +61,7 @@ func main() {
 	mux.HandleFunc("DELETE /tasks/{id}", deleteTask)
 
 	fmt.Println("Starting server...")
-	if err := http.ListenAndServe("localhost:8080", mux); err != nil {
+	if err := http.ListenAndServe("localhost:8090", mux); err != nil {
 		fmt.Println(err.Error())
 	}
 }

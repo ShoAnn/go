@@ -1,17 +1,21 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/joho/godotenv"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
-	"sync"
 	"time"
+
+	db "github.com/ShoAnn/go-playground/todolist-api/db/sqlc"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/joho/godotenv"
 )
 
 // define resource struct
@@ -23,14 +27,9 @@ type Task struct {
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 
-var (
-	todolist = []Task{
-		{ID: "1", Title: "Go to the grocery store", CreatedAt: time.Now(), UpdatedAt: time.Now()},
-		{ID: "2", Title: "Go to the capital", CreatedAt: time.Now(), UpdatedAt: time.Now()},
-	}
-	currentId    = 1
-	todolistLock sync.Mutex
-)
+type Server struct {
+	Queries *db.Queries
+}
 
 func main() {
 	// setup env
@@ -67,19 +66,24 @@ func main() {
 }
 
 // handler functions
-func getAllTasks(w http.ResponseWriter, r *http.Request) {
+func (s *Server) getAllTasks(w http.ResponseWriter, r *http.Request) {
 	// val (if empty return msg to w)
 	// write header
 	// encode() all resource data
-	if len(todolist) != 0 {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(todolist)
-	} else {
-		fmt.Fprintln(w, "your todolist is currently empty")
+
+	taskList, err := s.Queries.GetAllTasks(r.Context())
+	if err != nil {
+		http.Error(w, "Task not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(taskList); err != nil {
+		log.Printf("error encoding to json", err)
 	}
 }
 
-func getTask(w http.ResponseWriter, r *http.Request) {
+func (s *Server) getTask(w http.ResponseWriter, r *http.Request) {
 	// get id from url
 	// val (if id empty return msg to w)
 	// declare new instance of the resource struct for the returned data
@@ -88,66 +92,66 @@ func getTask(w http.ResponseWriter, r *http.Request) {
 	// write header and encode found data WEH
 
 	idStr := r.PathValue("id")
-	if idStr == "" {
-		http.Error(w, "id cannot empty", http.StatusBadRequest)
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+	}
+	// sqlc generated this method!
+	// We pass r.Context() so if the user cancels the request, the DB stops working too.
+	task, err := s.Queries.GetTask(r.Context(), int32(id))
+	if err != nil {
+		// If pgx can't find the row, it returns a specific "No Rows" error
+		http.Error(w, "Task not found", http.StatusNotFound)
 		return
 	}
-
-	var taskFound Task
-
-	var found bool
-	for _, task := range todolist {
-		if task.ID == idStr {
-			taskFound = task
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		http.Error(w, "task not found", http.StatusNotFound)
-		return
-	}
-
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(&taskFound); err != nil {
-		http.Error(w, "error encoding to json", http.StatusInternalServerError)
+	if err := json.NewEncoder(w).Encode(task); err != nil {
+		log.Printf("error encoding to json: %v", err)
 	}
 }
 
-func createTask(w http.ResponseWriter, r *http.Request) {
+func (s *Server) createTask(w http.ResponseWriter, r *http.Request) {
 	// create new instance of the resource struct
 	// request validation
 	// increment id
 	// lock > append > unlock
 	// write header
 	// write header and encode found data WEH
-	var newTask Task
+	type request struct {
+		Title     string `json:"title"`
+		Completed bool   `json:"completed"`
+	}
 
-	if err := json.NewDecoder(r.Body).Decode(&newTask); err != nil {
+	var req request
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "error decoding request body", http.StatusBadRequest)
 	}
-	if newTask.ID != "" {
-		http.Error(w, "ID field must not be set by the client", http.StatusBadRequest)
+
+	task, err := s.Queries.CreateTask(r.Context(), db.CreateTaskParams{
+		Title:     req.Title,
+		Completed: req.Completed,
+	})
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			http.Error(w, "error creating task", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "error creating task", http.StatusInternalServerError)
 		return
 	}
 
-	newTask.ID = strconv.Itoa(currentId)
-	currentId++
-
-	todolistLock.Lock()
-	defer todolistLock.Unlock()
-	todolist = append(todolist, newTask)
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(task); err != nil {
+		http.Error(w, "encoding error", http.StatusInternalServerError)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-
-	if err := json.NewEncoder(w).Encode(newTask); err != nil {
-		http.Error(w, "error encoding to json", http.StatusInternalServerError)
-	}
+	w.Write(buf.Bytes())
 }
 
-func updateTask(w http.ResponseWriter, r *http.Request) {
+func (s *Server) updateTask(w http.ResponseWriter, r *http.Request) {
 	// get id from url
 	// val (if id empty return msg to w)
 	// declare new instance of the resource struct for the edited data
@@ -161,38 +165,43 @@ func updateTask(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "id cannot empty", http.StatusBadRequest)
 		return
 	}
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+	}
 
-	var newTask Task
-	if err := json.NewDecoder(r.Body).Decode(&newTask); err != nil {
+	type request struct {
+		Id        int    `json:"id"`
+		Title     string `json:"title"`
+		Completed bool   `json:"completed"`
+	}
+	var req request
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "error decoding request body ", http.StatusBadRequest)
-	}
-
-	todolistLock.Lock()
-	defer todolistLock.Unlock()
-
-	foundId := -1
-	for i, task := range todolist {
-		if task.ID == idStr {
-			foundId = i
-			break
-		}
-	}
-
-	if foundId == -1 {
-		http.Error(w, "task not found", http.StatusNotFound)
 		return
 	}
 
-	todolist[foundId].Title = newTask.Title
-	todolist[foundId].Completed = newTask.Completed
+	updateTask, err := s.Queries.UpdateTask(r.Context(), db.UpdateTaskParams{
+		ID:        int32(id),
+		Title:     req.Title,
+		Completed: req.Completed,
+	})
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			http.Error(w, "error creating task", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "error updating task", http.StatusInternalServerError)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(newTask); err != nil {
-		http.Error(w, "error encoding to json", http.StatusInternalServerError)
+	if err := json.NewEncoder(w).Encode(updateTask); err != nil {
+		log.Printf("error encoding to json: %v", err)
 	}
 }
 
-func deleteTask(w http.ResponseWriter, r *http.Request) {
+func (s *Server) deleteTask(w http.ResponseWriter, r *http.Request) {
 	// get id from url
 	// val (if id empty return msg to w)
 	// search data with the id (idiom use var found)
@@ -206,23 +215,20 @@ func deleteTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	todolistLock.Lock()
-	defer todolistLock.Unlock()
-
-	foundId := -1
-	for i, task := range todolist {
-		if task.ID == idStr {
-			foundId = i
-			break
-		}
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
 	}
 
-	if foundId == -1 {
+	deleteResult, err := s.Queries.DeleteTask(r.Context(), int32(id))
+	rowsAffected := deleteResult.RowsAffected()
+	if rowsAffected == 0 {
 		http.Error(w, "task not found", http.StatusNotFound)
 		return
 	}
-
-	todolist = append(todolist[:foundId], todolist[foundId+1:]...)
-
+	if err != nil {
+		http.Error(w, "error deleting task", http.StatusInternalServerError)
+		return
+	}
 	w.WriteHeader(http.StatusNoContent)
 }

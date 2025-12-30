@@ -12,6 +12,6 @@ type Task struct {
 	ID        int32
 	Title     string
 	Completed bool
-	CreatedAt pgtype.Timestamp
-	UpdatedAt pgtype.Timestamp
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
 }

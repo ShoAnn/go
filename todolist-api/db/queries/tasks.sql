@@ -1,12 +1,12 @@
 -- name: GetAllTasks :many
-SELECT * from tasks;
+SELECT * from tasks ORDER BY id;
 
 -- name: GetTask :one
-SELECT * from tasks WHERE id = $1;
+SELECT * from tasks WHERE id = $1 LIMIT 1;
 
 -- name: CreateTask :one
-INSERT INTO tasks (id, title, completed)
-VALUES ($1, $2, $3)
+INSERT INTO tasks (title, completed)
+VALUES ($1, $2)
 RETURNING *;
 
 -- name: UpdateTask :one
@@ -15,6 +15,6 @@ SET title = $2, completed = $3
 WHERE id = $1
 RETURNING *;
 
--- name: DeleteTask :exec
+-- name: DeleteTask :execresult
 DELETE FROM tasks
 WHERE id = $1;

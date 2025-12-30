@@ -7,22 +7,23 @@ package db
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 const createTask = `-- name: CreateTask :one
-INSERT INTO tasks (id, title, completed)
-VALUES ($1, $2, $3)
+INSERT INTO tasks (title, completed)
+VALUES ($1, $2)
 RETURNING id, title, completed, created_at, updated_at
 `
 
 type CreateTaskParams struct {
-	ID        int32
 	Title     string
 	Completed bool
 }
 
 func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, error) {
-	row := q.db.QueryRow(ctx, createTask, arg.ID, arg.Title, arg.Completed)
+	row := q.db.QueryRow(ctx, createTask, arg.Title, arg.Completed)
 	var i Task
 	err := row.Scan(
 		&i.ID,
@@ -34,18 +35,17 @@ func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, e
 	return i, err
 }
 
-const deleteTask = `-- name: DeleteTask :exec
+const deleteTask = `-- name: DeleteTask :execresult
 DELETE FROM tasks
 WHERE id = $1
 `
 
-func (q *Queries) DeleteTask(ctx context.Context, id int32) error {
-	_, err := q.db.Exec(ctx, deleteTask, id)
-	return err
+func (q *Queries) DeleteTask(ctx context.Context, id int32) (pgconn.CommandTag, error) {
+	return q.db.Exec(ctx, deleteTask, id)
 }
 
 const getAllTasks = `-- name: GetAllTasks :many
-SELECT id, title, completed, created_at, updated_at from tasks
+SELECT id, title, completed, created_at, updated_at from tasks ORDER BY id
 `
 
 func (q *Queries) GetAllTasks(ctx context.Context) ([]Task, error) {
@@ -75,7 +75,7 @@ func (q *Queries) GetAllTasks(ctx context.Context) ([]Task, error) {
 }
 
 const getTask = `-- name: GetTask :one
-SELECT id, title, completed, created_at, updated_at from tasks WHERE id = $1
+SELECT id, title, completed, created_at, updated_at from tasks WHERE id = $1 LIMIT 1
 `
 
 func (q *Queries) GetTask(ctx context.Context, id int32) (Task, error) {

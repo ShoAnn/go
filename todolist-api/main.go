@@ -9,23 +9,12 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"time"
 
 	db "github.com/ShoAnn/go-playground/todolist-api/db/sqlc"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 )
-
-// define resource struct
-type Task struct {
-	ID        string    `json:"id"`
-	Title     string    `json:"title"`
-	Completed bool      `json:"completed"`
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt"`
-}
 
 type Server struct {
 	Queries *db.Queries
@@ -37,27 +26,36 @@ func main() {
 	// define mux
 	// define routes
 	// start server
+	ctx := context.Background()
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
 
-	dbpool, err := pgxpool.New(context.Background(), os.Getenv("POSTGRES_URL"))
+	dbpool, err := pgxpool.New(ctx, os.Getenv("POSTGRES_URL"))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to create connection pool: %v\n", err)
 		os.Exit(1)
 	}
 
-	fmt.Println("Database ping successful!")
 	defer dbpool.Close()
+	if err := dbpool.Ping(ctx); err != nil {
+		log.Fatalf("Database unreachable: %v", err)
+	}
 
+	// 4. Wrap the pool with sqlc
+	// database.New comes from the db.go file sqlc generated for you
+	queries := db.New(dbpool)
+	server := &Server{
+		Queries: queries,
+	}
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("GET /tasks", getAllTasks)
-	mux.HandleFunc("GET /tasks/{id}", getTask)
-	mux.HandleFunc("POST /tasks", createTask)
-	mux.HandleFunc("PUT /tasks/{id}", updateTask)
-	mux.HandleFunc("DELETE /tasks/{id}", deleteTask)
+	mux.HandleFunc("GET /tasks", server.getAllTasks)
+	mux.HandleFunc("GET /tasks/{id}", server.getTask)
+	mux.HandleFunc("POST /tasks", server.createTask)
+	mux.HandleFunc("PUT /tasks/{id}", server.updateTask)
+	mux.HandleFunc("DELETE /tasks/{id}", server.deleteTask)
 
 	fmt.Println("Starting server...")
 	if err := http.ListenAndServe("localhost:8090", mux); err != nil {
@@ -79,7 +77,7 @@ func (s *Server) getAllTasks(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(taskList); err != nil {
-		log.Printf("error encoding to json", err)
+		log.Printf("error encoding to json: %v", err)
 	}
 }
 

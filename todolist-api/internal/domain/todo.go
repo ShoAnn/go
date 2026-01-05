@@ -1,6 +1,9 @@
 package domain
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 type Task struct {
 	ID        int64     `json:"id"`
@@ -10,10 +13,16 @@ type Task struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-type TodoRepository interface {
-	GetAll(task *Task) ([]*Task, error)
-	GetById(id int) (*Task, error)
-	Create(task *Task) error
-	Update(id int) (*Task, error)
-	Delete(id int) error
+type CreateTaskParams struct {
+	Title     string
+	Completed bool
+}
+
+type TaskRepository interface {
+	GetAll(ctx context.Context) ([]*Task, error)
+	GetById(ctx context.Context, id int) (*Task, error)
+	Create(ctx context.Context, params *CreateTaskParams) error
+	Complete(ctx context.Context, id int) (*Task, error)
+	Edit(ctx context.Context, id int) (*Task, error)
+	Delete(ctx context.Context, id int) error
 }

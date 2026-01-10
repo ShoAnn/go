@@ -18,11 +18,15 @@ type CreateTaskParams struct {
 	Completed bool
 }
 
+type UpdateTaskParams struct {
+	Title     string
+	Completed bool
+}
+
 type TaskRepository interface {
 	GetAll(ctx context.Context) ([]*Task, error)
 	GetById(ctx context.Context, id int) (*Task, error)
-	Create(ctx context.Context, params *CreateTaskParams) error
-	Complete(ctx context.Context, id int) (*Task, error)
+	Create(ctx context.Context, params *CreateTaskParams) (*Task, error)
 	Edit(ctx context.Context, id int) (*Task, error)
 	Delete(ctx context.Context, id int) error
 }

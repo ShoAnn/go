@@ -6,8 +6,8 @@ import (
 	db "github.com/ShoAnn/go-playground/todolist-api/internal/db/sqlc"
 )
 
-type DBRepo struct {
+type PostgresTaskRepository struct {
 	q *db.Queries
 }
 
-func (r *DBRepo) 
+func (r *PostgresTaskRepository)  

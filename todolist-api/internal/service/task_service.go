@@ -10,7 +10,7 @@ type TaskService struct {
 	repo domain.TaskRepository
 }
 
-func (s *TaskService) GetAll(ctx context.Context) ([]*domain.Task, error) {
+func (s *TaskService) ListTasks(ctx context.Context) ([]*domain.Task, error) {
 	taskList, err := s.repo.GetAll(ctx)
 	if err != nil {
 		return nil, err
@@ -19,7 +19,7 @@ func (s *TaskService) GetAll(ctx context.Context) ([]*domain.Task, error) {
 	return taskList, nil
 }
 
-func (s *TaskService) GetById(ctx context.Context, id int) (*domain.Task, error) {
+func (s *TaskService) GetTask(ctx context.Context, id int) (*domain.Task, error) {
 	task, err := s.repo.GetById(ctx, id)
 	if err != nil {
 		return nil, err
@@ -28,25 +28,32 @@ func (s *TaskService) GetById(ctx context.Context, id int) (*domain.Task, error)
 	return task, nil
 }
 
-func (s *TaskService) Create(ctx context.Context, p *domain.CreateTaskParams) (*domain.Task, error) {
+func (s *TaskService) CreateTask(ctx context.Context, p *domain.CreateTaskParams) (*domain.Task, error) {
 	task, err := s.repo.Create(ctx, p)
 	if err != nil {
 		return nil, err
 	}
 
 	return &domain.Task{
-		ID:        task.ID,
 		Title:     task.Title,
 		Completed: task.Completed,
 	}, nil
 }
 
-func (s *TaskService) Complete(ctx context.Context, id int) (*domain.Task, error) {
-	task, err := s.repo.(ctx, id)
+func (s *TaskService) CompleteTask(ctx context.Context, id int) (*domain.Task, error) {
+	task, err := s.repo.GetById(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-
+	params := &domain.UpdateTaskParams{
+		Title:     task.Title,
+		Completed: true,
+	}
+	newTask, err := s.repo.Update(ctx, id, params)
+	if err != nil {
+		return nil, err
+	}
+	return newTask, nil
 }
 
 func (s *TaskService) Edit(ctx context.Context, id int, t *domain.Task) (*domain.Task, error) {}

@@ -19,16 +19,15 @@ type CreateTaskParams struct {
 }
 
 type UpdateTaskParams struct {
-	ID        int
-	Title     string
-	Completed bool
+	Title     *string // pointer here means this field is optional for updates meaning it becomes nil if not mentioned
+	Completed *bool
 }
 
 type TaskRepository interface {
 	GetAll(ctx context.Context) ([]*Task, error)
 	GetById(ctx context.Context, id int) (*Task, error)
 	Create(ctx context.Context, params *CreateTaskParams) (*Task, error)
-	Complete(ctx context.Context, id int) (*Task, error)
-	Edit(ctx context.Context, id int, params *UpdateTaskParams) (*Task, error)
+	MarkCompleted(ctx context.Context, id int) (*Task, error)
+	Update(ctx context.Context, id int, params *UpdateTaskParams) (*Task, error)
 	Delete(ctx context.Context, id int) error
 }

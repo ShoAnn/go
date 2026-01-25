@@ -10,4 +10,6 @@ type PostgresTaskRepository struct {
 	q *db.Queries
 }
 
-func (r *PostgresTaskRepository)  
+func (r *PostgresTaskRepository) MarkCompleted(ctx context.Context, id int) (db.Task, error) {
+	return r.q.MarkCompleted(ctx, int32(id))
+}

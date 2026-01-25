@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 
 	"github.com/ShoAnn/go-playground/todolist-api/internal/domain"
 )
@@ -45,15 +46,19 @@ func (s *TaskService) CompleteTask(ctx context.Context, id int) (*domain.Task, e
 	if err != nil {
 		return nil, err
 	}
-	params := &domain.UpdateTaskParams{
-		Title:     task.Title,
-		Completed: true,
+
+	if task.Completed {
+		return nil, errors.New("task already completed")
 	}
-	newTask, err := s.repo.Update(ctx, id, params)
+	completed := true
+
+	updatedTask, err := s.repo.Update(ctx, id, &domain.UpdateTaskParams{
+		Completed: &completed,
+	})
 	if err != nil {
 		return nil, err
 	}
-	return newTask, nil
+	return updatedTask, nil
 }
 
 func (s *TaskService) Edit(ctx context.Context, id int, t *domain.Task) (*domain.Task, error) {}

@@ -14,7 +14,7 @@ import (
 const createTask = `-- name: CreateTask :one
 INSERT INTO tasks (title, completed)
 VALUES ($1, $2)
-RETURNING id, title, completed, created_at, updated_at
+RETURNING id, title, completed, created_at, updated_at, version
 `
 
 type CreateTaskParams struct {
@@ -31,6 +31,7 @@ func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, e
 		&i.Completed,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Version,
 	)
 	return i, err
 }
@@ -45,7 +46,7 @@ func (q *Queries) DeleteTask(ctx context.Context, id int32) (pgconn.CommandTag, 
 }
 
 const getAllTasks = `-- name: GetAllTasks :many
-SELECT id, title, completed, created_at, updated_at from tasks ORDER BY id
+SELECT id, title, completed, created_at, updated_at, version from tasks ORDER BY id
 `
 
 func (q *Queries) GetAllTasks(ctx context.Context) ([]Task, error) {
@@ -63,6 +64,7 @@ func (q *Queries) GetAllTasks(ctx context.Context) ([]Task, error) {
 			&i.Completed,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Version,
 		); err != nil {
 			return nil, err
 		}
@@ -75,7 +77,7 @@ func (q *Queries) GetAllTasks(ctx context.Context) ([]Task, error) {
 }
 
 const getTask = `-- name: GetTask :one
-SELECT id, title, completed, created_at, updated_at from tasks WHERE id = $1 LIMIT 1
+SELECT id, title, completed, created_at, updated_at, version from tasks WHERE id = $1 LIMIT 1
 `
 
 func (q *Queries) GetTask(ctx context.Context, id int32) (Task, error) {
@@ -87,6 +89,28 @@ func (q *Queries) GetTask(ctx context.Context, id int32) (Task, error) {
 		&i.Completed,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Version,
+	)
+	return i, err
+}
+
+const markCompleted = `-- name: MarkCompleted :one
+UPDATE tasks
+SET completed = TRUE
+WHERE id = $1
+RETURNING id, title, completed, created_at, updated_at, version
+`
+
+func (q *Queries) MarkCompleted(ctx context.Context, id int32) (Task, error) {
+	row := q.db.QueryRow(ctx, markCompleted, id)
+	var i Task
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Completed,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Version,
 	)
 	return i, err
 }
@@ -95,7 +119,7 @@ const updateTask = `-- name: UpdateTask :one
 UPDATE tasks
 SET title = $2, completed = $3
 WHERE id = $1
-RETURNING id, title, completed, created_at, updated_at
+RETURNING id, title, completed, created_at, updated_at, version
 `
 
 type UpdateTaskParams struct {
@@ -113,6 +137,7 @@ func (q *Queries) UpdateTask(ctx context.Context, arg UpdateTaskParams) (Task, e
 		&i.Completed,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Version,
 	)
 	return i, err
 }

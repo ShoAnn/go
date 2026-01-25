@@ -9,6 +9,12 @@ INSERT INTO tasks (title, completed)
 VALUES ($1, $2)
 RETURNING *;
 
+-- name: MarkCompleted :one
+UPDATE tasks
+SET completed = TRUE
+WHERE id = $1
+RETURNING *;
+
 -- name: UpdateTask :one
 UPDATE tasks
 SET title = $2, completed = $3

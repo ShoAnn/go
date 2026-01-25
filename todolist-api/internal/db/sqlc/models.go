@@ -14,4 +14,5 @@ type Task struct {
 	Completed bool
 	CreatedAt pgtype.Timestamptz
 	UpdatedAt pgtype.Timestamptz
+	Version   int16
 }

@@ -94,30 +94,23 @@ func (q *Queries) GetTask(ctx context.Context, id int32) (Task, error) {
 	return i, err
 }
 
-const markCompleted = `-- name: MarkCompleted :one
+const markCompleted = `-- name: MarkCompleted :exec
 UPDATE tasks
 SET completed = TRUE
 WHERE id = $1
-RETURNING id, title, completed, created_at, updated_at, version
 `
 
-func (q *Queries) MarkCompleted(ctx context.Context, id int32) (Task, error) {
-	row := q.db.QueryRow(ctx, markCompleted, id)
-	var i Task
-	err := row.Scan(
-		&i.ID,
-		&i.Title,
-		&i.Completed,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.Version,
-	)
-	return i, err
+func (q *Queries) MarkCompleted(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, markCompleted, id)
+	return err
 }
 
 const updateTask = `-- name: UpdateTask :one
 UPDATE tasks
-SET title = $2, completed = $3
+SET
+	title = $2,
+	completed = $3,
+	updated_at = now()
 WHERE id = $1
 RETURNING id, title, completed, created_at, updated_at, version
 `

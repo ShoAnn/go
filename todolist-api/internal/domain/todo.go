@@ -26,8 +26,8 @@ type UpdateTaskParams struct {
 type TaskRepository interface {
 	GetAll(ctx context.Context) ([]*Task, error)
 	GetById(ctx context.Context, id int) (*Task, error)
-	Create(ctx context.Context, params *CreateTaskParams) (*Task, error)
-	MarkCompleted(ctx context.Context, id int) (*Task, error)
-	Update(ctx context.Context, id int, params *UpdateTaskParams) (*Task, error)
+	Create(ctx context.Context, p *CreateTaskParams) (*Task, error)
+	Update(ctx context.Context, id int, p *UpdateTaskParams) (*Task, error)
 	Delete(ctx context.Context, id int) error
+	MarkCompleted(ctx context.Context, id int) error
 }

@@ -41,26 +41,26 @@ func (s *TaskService) CreateTask(ctx context.Context, p *domain.CreateTaskParams
 	}, nil
 }
 
-func (s *TaskService) CompleteTask(ctx context.Context, id int) (*domain.Task, error) {
+func (s *TaskService) CompleteTask(ctx context.Context, id int) error {
+	task, err := s.repo.GetById(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	if task.Completed {
+		return errors.New("task already completed")
+	}
+
+	return s.repo.MarkCompleted(ctx, id)
+}
+
+func (s *TaskService) Edit(ctx context.Context, id int, in *domain.UpdateTaskParams) (*domain.Task, error) {
 	task, err := s.repo.GetById(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	if task.Completed {
-		return nil, errors.New("task already completed")
-	}
-	completed := true
-
-	updatedTask, err := s.repo.Update(ctx, id, &domain.UpdateTaskParams{
-		Completed: &completed,
-	})
-	if err != nil {
-		return nil, err
-	}
 	return updatedTask, nil
 }
-
-func (s *TaskService) Edit(ctx context.Context, id int, t *domain.Task) (*domain.Task, error) {}
 
 func (s *TaskService) Delete(ctx context.Context, id int) error {}

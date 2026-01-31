@@ -54,13 +54,31 @@ func (s *TaskService) CompleteTask(ctx context.Context, id int) error {
 	return s.repo.MarkCompleted(ctx, id)
 }
 
-func (s *TaskService) Edit(ctx context.Context, id int, in *domain.UpdateTaskParams) (*domain.Task, error) {
+func (s *TaskService) Edit(ctx context.Context, id int, p *domain.UpdateTaskParams) (*domain.Task, error) {
 	task, err := s.repo.GetById(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
+	if p.Title != nil {
+		task.Title = *p.Title
+	}
+	if p.Completed != nil {
+		task.Completed = *p.Completed
+	}
+	updatedTask, err := s.repo.Update(ctx, id, &domain.UpdateTaskParams{
+		Title:     &task.Title,
+		Completed: &task.Completed,
+		Version:   int(task.Version),
+	})
+
 	return updatedTask, nil
 }
 
-func (s *TaskService) Delete(ctx context.Context, id int) error {}
+func (s *TaskService) Delete(ctx context.Context, id int) error {
+	err := s.repo.Delete(ctx, id)
+	if err != nil {
+		return err
+	}
+	return nil
+}

@@ -19,8 +19,9 @@ UPDATE tasks
 SET
 	title = $2,
 	completed = $3,
-	updated_at = now()
-WHERE id = $1
+	updated_at = now(),
+	version = version + 1
+WHERE id = $1 AND version = $4
 RETURNING *;
 
 -- name: DeleteTask :execresult

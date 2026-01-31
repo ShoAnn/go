@@ -2,6 +2,7 @@ package domain
 
 import (
 	"context"
+	"go/version"
 	"time"
 )
 
@@ -11,6 +12,7 @@ type Task struct {
 	Completed bool      `json:"completed"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+	Version   int32     `json:"version"`
 }
 
 type CreateTaskParams struct {
@@ -21,6 +23,7 @@ type CreateTaskParams struct {
 type UpdateTaskParams struct {
 	Title     *string // pointer here means this field is optional for updates meaning it becomes nil if not mentioned
 	Completed *bool
+	Version   int
 }
 
 type TaskRepository interface {

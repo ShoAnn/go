@@ -110,8 +110,9 @@ UPDATE tasks
 SET
 	title = $2,
 	completed = $3,
-	updated_at = now()
-WHERE id = $1
+	updated_at = now(),
+	version = version + 1
+WHERE id = $1 AND version = $4
 RETURNING id, title, completed, created_at, updated_at, version
 `
 
@@ -119,10 +120,16 @@ type UpdateTaskParams struct {
 	ID        int32
 	Title     string
 	Completed bool
+	Version   int16
 }
 
 func (q *Queries) UpdateTask(ctx context.Context, arg UpdateTaskParams) (Task, error) {
-	row := q.db.QueryRow(ctx, updateTask, arg.ID, arg.Title, arg.Completed)
+	row := q.db.QueryRow(ctx, updateTask,
+		arg.ID,
+		arg.Title,
+		arg.Completed,
+		arg.Version,
+	)
 	var i Task
 	err := row.Scan(
 		&i.ID,

@@ -11,24 +11,26 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func (s *Server) getAllTasks(w http.ResponseWriter, r *http.Request) {
-	// val (if empty return msg to w)
-	// write header
-	// encode() all resource data
+type TaskHandler struct {
+	service domain.TaskService
+}
 
-	taskList, err := s.Queries.GetAllTasks(r.Context())
+func NewTaskHandler(s domain.TaskService) *TaskHandler {
+	return &TaskHandler{service: s}
+}
+
+func (h *TaskHandler) ListTasks(w http.ResponseWriter, r *http.Request) {
+	taskList, err := h.service.ListTasks(r.Context())
 	if err != nil {
-		http.Error(w, "Task not found", http.StatusNotFound)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(taskList); err != nil {
-		log.Printf("error encoding to json: %v", err)
-	}
+	_ = json.NewEncoder(w).Encode(taskList)
 }
 
-func (s *Server) getTask(w http.ResponseWriter, r *http.Request) {
+func (h *TaskHandler) GetTask(w http.ResponseWriter, r *http.Request) {
 	// get id from url
 	// val (if id empty return msg to w)
 	// declare new instance of the resource struct for the returned data
@@ -43,19 +45,17 @@ func (s *Server) getTask(w http.ResponseWriter, r *http.Request) {
 	}
 	// sqlc generated this method!
 	// We pass r.Context() so if the user cancels the request, the DB stops working too.
-	task, err := s.Queries.GetTask(r.Context(), int32(id))
+	task, err := h.service.GetTask(r.Context(), id)
 	if err != nil {
 		// If pgx can't find the row, it returns a specific "No Rows" error
 		http.Error(w, "Task not found", http.StatusNotFound)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(task); err != nil {
-		log.Printf("error encoding to json: %v", err)
-	}
+	_ = json.NewEncoder(w).Encode(task)
 }
 
-func (s *Server) createTask(w http.ResponseWriter, r *http.Request) {
+func (h *TaskHandler) createTask(w http.ResponseWriter, r *http.Request) {
 	// create new instance of the resource struct
 	// request validation
 	// increment id
@@ -96,7 +96,7 @@ func (s *Server) createTask(w http.ResponseWriter, r *http.Request) {
 	w.Write(buf.Bytes())
 }
 
-func (s *Server) updateTask(w http.ResponseWriter, r *http.Request) {
+func (h *TaskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 	// get id from url
 	// val (if id empty return msg to w)
 	// declare new instance of the resource struct for the edited data
@@ -146,7 +146,7 @@ func (s *Server) updateTask(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) deleteTask(w http.ResponseWriter, r *http.Request) {
+func (h *TaskHandler) deleteTask(w http.ResponseWriter, r *http.Request) {
 	// get id from url
 	// val (if id empty return msg to w)
 	// search data with the id (idiom use var found)

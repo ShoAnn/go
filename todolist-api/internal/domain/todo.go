@@ -26,6 +26,15 @@ type UpdateTaskParams struct {
 	Version   int
 }
 
+type TaskService interface {
+	ListTasks(ctx context.Context) ([]*Task, error)
+	GetTask(ctx context.Context, id int) (*Task, error)
+	CreateTask(ctx context.Context, p *CreateTaskParams) (*Task, error)
+	CompleteTask(ctx context.Context, id int) error
+	Edit(ctx context.Context, id int, p *UpdateTaskParams) (*Task, error)
+	Delete(ctx context.Context, id int) error
+}
+
 type TaskRepository interface {
 	GetAll(ctx context.Context) ([]*Task, error)
 	GetById(ctx context.Context, id int) (*Task, error)

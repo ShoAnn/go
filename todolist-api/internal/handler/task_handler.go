@@ -69,34 +69,24 @@ func (h *TaskHandler) createTask(w http.ResponseWriter, r *http.Request) {
 
 	var req request
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "error decoding request body", http.StatusBadRequest)
+		http.Error(w, "invalid request body", http.StatusBadRequest)
 	}
 
-	task, err := s.Queries.CreateTask(r.Context(), db.CreateTaskParams{
+	task, err := h.service.CreateTask(r.Context(), &domain.CreateTaskParams{
 		Title:     req.Title,
 		Completed: req.Completed,
 	})
 	if err != nil {
-		if err == pgx.ErrNoRows {
-			http.Error(w, "error creating task", http.StatusNotFound)
-			return
-		}
 		http.Error(w, "error creating task", http.StatusInternalServerError)
-		return
-	}
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(task); err != nil {
-		http.Error(w, "encoding error", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	w.Write(buf.Bytes())
+	_ = json.NewEncoder(w).Encode(task)
 }
 
-func (h *TaskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
+func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 	// get id from url
 	// val (if id empty return msg to w)
 	// declare new instance of the resource struct for the edited data
@@ -115,35 +105,28 @@ func (h *TaskHandler) updateTask(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 	}
 
-	type request struct {
-		Id        int    `json:"id"`
-		Title     string `json:"title"`
-		Completed bool   `json:"completed"`
-	}
-	var req request
+	req := struct {
+		Title     string `json:"title,omitempty"`
+		Completed bool   `json:"completed,omitempty"`
+		Version   int    `json:"version"`
+	}{}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "error decoding request body ", http.StatusBadRequest)
 		return
 	}
 
-	updateTask, err := s.Queries.UpdateTask(r.Context(), db.UpdateTaskParams{
-		ID:        int32(id),
-		Title:     req.Title,
-		Completed: req.Completed,
+	updatedTask, err := h.service.Edit(r.Context(), id, &domain.UpdateTaskParams{
+		Title:     &req.Title,
+		Completed: &req.Completed,
+		Version:   req.Version,
 	})
 	if err != nil {
-		if err == pgx.ErrNoRows {
-			http.Error(w, "error creating task", http.StatusNotFound)
-			return
-		}
 		http.Error(w, "error updating task", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(updateTask); err != nil {
-		log.Printf("error encoding to json: %v", err)
-	}
+	_ = json.NewEncoder(w).Encode(updatedTask)
 }
 
 func (h *TaskHandler) deleteTask(w http.ResponseWriter, r *http.Request) {
@@ -165,12 +148,7 @@ func (h *TaskHandler) deleteTask(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 	}
 
-	deleteResult, err := s.Queries.DeleteTask(r.Context(), int32(id))
-	rowsAffected := deleteResult.RowsAffected()
-	if rowsAffected == 0 {
-		http.Error(w, "task not found", http.StatusNotFound)
-		return
-	}
+	err = h.service.Delete(r.Context(), id)
 	if err != nil {
 		http.Error(w, "error deleting task", http.StatusInternalServerError)
 		return

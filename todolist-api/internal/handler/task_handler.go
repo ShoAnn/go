@@ -1,14 +1,11 @@
 package handler
 
 import (
-	"bytes"
 	"encoding/json"
-	"log"
 	"net/http"
 	"strconv"
 
 	"github.com/ShoAnn/go-playground/todolist-api/internal/domain"
-	"github.com/jackc/pgx/v5"
 )
 
 type TaskHandler struct {

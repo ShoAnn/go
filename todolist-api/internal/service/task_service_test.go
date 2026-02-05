@@ -3,53 +3,62 @@ package service
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/ShoAnn/go-playground/todolist-api/internal/domain"
-	"github.com/ShoAnn/go-playground/todolist-api/internal/service"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
-type MockRepo struct {
-	
-
-	// GetAllFunc        func(ctx context.Context) ([]*domain.Task, error)
-	// GetByIdFunc       func(ctx context.Context, id int) (*domain.Task, error)
-	// CreateFunc        func(ctx context.Context, p *domain.CreateTaskParams) (*domain.Task, error)
-	// UpdateFunc        func(ctx context.Context, id int, p *domain.UpdateTaskParams) (*domain.Task, error)
-	// DeleteFunc        func(ctx context.Context, id int) error
-	// MarkCompletedFunc func(ctx context.Context, id int) error
-}
-
-
-func (m *MockRepo) GetAll(ctx context.Context) ([]*domain.Task, error) {
-	return m.GetAllFunc(ctx)
-}
-func (m *MockRepo) GetById(ctx context.Context, id int) (*domain.Task, error) {
-	return m.GetByIdFunc(ctx, id)
-}
-func (m *MockRepo) Create(ctx context.Context, p *domain.CreateTaskParams) (*domain.Task, error) {
-	return m.CreateFunc(ctx, p)
-}
-func (m *MockRepo) Update(ctx context.Context, id int, p *domain.UpdateTaskParams) (*domain.Task, error) {
-	return m.Update(ctx, id, p)
-}
-func (m *MockRepo) Delete(ctx context.Context, id int) error {
-	return m.Delete(ctx, id)
-}
-func (m *MockRepo) MarkCompleted(ctx context.Context, id int) error {
-	return m.MarkCompleted(ctx, id)
-}
-
 func TestListTasks(t *testing.T) {
+	validTasks := []*domain.Task{
+		&domain.Task{
+			ID:        1,
+			Title:     "Shopping",
+			Completed: false,
+			CreatedAt: time.Now().Add(-2 * time.Minute),
+			UpdatedAt: time.Now(),
+			Version:   0,
+		},
+		&domain.Task{
+			ID:        2,
+			Title:     "Work",
+			Completed: true,
+			CreatedAt: time.Now().Add(-40 * time.Minute),
+			UpdatedAt: time.Now(),
+			Version:   1,
+		},
+	}
+
 	tests := []struct {
-		name     string
-		input    context.Context
-		expected *domain.Task
+		name          string
+		mockSetup     func(m *MockRepo)
+		expectedTasks []*domain.Task
+		expectedError error
 	}{
-		{"invalid inputs", 3, nil}
+		{
+			name: "Happy path",
+			mockSetup: func(m *MockRepo) {
+				m.On("ListTasks", mock.Anything).Return(validTasks, nil)
+			},
+			expectedError: nil,
+		},
 	}
 	for _, scen := range tests {
 		t.Run(scen.name, func(t *testing.T) {
-			result := service
+			mockRepo := new(MockRepo)
+			scen.mockSetup(mockRepo)
+
+			svc := &TaskService{repo: mockRepo}
+
+			tasks, err := svc.ListTasks(context.Background())
+
+			if scen.expectedError != nil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, scen.expectedTasks, tasks)
+			}
 		})
 	}
 }

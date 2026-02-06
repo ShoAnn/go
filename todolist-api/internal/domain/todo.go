@@ -2,7 +2,6 @@ package domain
 
 import (
 	"context"
-	"go/version"
 	"time"
 )
 

@@ -55,9 +55,9 @@ func TestListTasks(t *testing.T) {
 		{
 			name: "db failure",
 			mockSetup: func(m *MockRepo) {
-				m.On("GetAll", mock.Anything).Return(nil, errors.New("db failure"))
+				m.On("GetAll", mock.Anything).Return(nil, errors.New("repo error"))
 			},
-			expectedError: errors.New("db failure"),
+			expectedError: errors.New("repo error"),
 		},
 	}
 	for _, scen := range tests {
@@ -120,6 +120,14 @@ func TestGetById(t *testing.T) {
 			},
 			expectedError: errors.New("invalid id"),
 		},
+		{
+			name:   "db failure",
+			taskId: 1,
+			mockSetup: func(m *MockRepo) {
+				m.On("GetById", mock.Anything, 1).Return(nil, errors.New("repo error"))
+			},
+			expectedError: errors.New("repo error"),
+		},
 	}
 
 	for _, scen := range tests {
@@ -135,6 +143,295 @@ func TestGetById(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, task.Title, scen.expectedTitle)
+			}
+		})
+	}
+}
+
+func TestCreateTask(t *testing.T) {
+	validTask := &domain.Task{
+		ID:        1,
+		Title:     "Shopping",
+		Completed: false,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		Version:   0,
+	}
+	params := &domain.CreateTaskParams{Title: "Shopping", Completed: false}
+
+	tests := []struct {
+		name          string
+		params        *domain.CreateTaskParams
+		mockSetup     func(m *MockRepo)
+		expectedTitle string
+		expectedError error
+	}{
+		{
+			name:   "Happy",
+			params: params,
+			mockSetup: func(m *MockRepo) {
+				m.On("Create", mock.Anything, params).Return(validTask, nil)
+			},
+			expectedTitle: "Shopping",
+			expectedError: nil,
+		},
+		{
+			name:   "repo error",
+			params: params,
+			mockSetup: func(m *MockRepo) {
+				m.On("Create", mock.Anything, params).Return(nil, errors.New("create task failed"))
+			},
+			expectedTitle: "",
+			expectedError: errors.New("create task failed"),
+		},
+	}
+
+	for _, scen := range tests {
+		t.Run(scen.name, func(t *testing.T) {
+			mockRepo := new(MockRepo)
+			scen.mockSetup(mockRepo)
+
+			svc := &TaskService{repo: mockRepo}
+
+			task, err := svc.CreateTask(context.Background(), scen.params)
+
+			if scen.expectedError != nil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, task.Title, scen.expectedTitle)
+			}
+		})
+	}
+}
+
+func TestUpdateTask(t *testing.T) {
+	now := time.Now()
+	task := &domain.Task{
+		ID:        1,
+		Title:     "Shopping",
+		Completed: false,
+		CreatedAt: now,
+		UpdatedAt: time.Now(),
+		Version:   0,
+	}
+
+	newTitle := "Shopping Grocery"
+	newCompleted := true
+	params := &domain.UpdateTaskParams{Title: &newTitle, Completed: &newCompleted, Version: 0}
+
+	updatedTask := &domain.Task{
+		ID:        1,
+		Title:     newTitle,
+		Completed: newCompleted,
+		CreatedAt: now,
+		UpdatedAt: time.Now(),
+		Version:   0,
+	}
+
+	tests := []struct {
+		name                 string
+		taskId               int
+		params               *domain.UpdateTaskParams
+		mockSetup            func(m *MockRepo)
+		expectedNewTitle     string
+		expectedNewCompleted bool
+		expectedError        error
+	}{
+		{
+			name:   "Happy",
+			taskId: 1,
+			params: params,
+			mockSetup: func(m *MockRepo) {
+				m.On("GetById", mock.Anything, 1).Return(task, nil)
+				m.On("Update", mock.Anything, 1, params).Return(updatedTask, nil)
+			},
+			expectedNewTitle:     "Shopping Grocery",
+			expectedNewCompleted: true,
+			expectedError:        nil,
+		},
+		{
+			name:   "invalid id",
+			taskId: -1,
+			mockSetup: func(m *MockRepo) {
+				m.On("GetById", mock.Anything, -1).Return(nil, errors.New("invalid id"))
+			},
+			expectedNewTitle:     "",
+			expectedNewCompleted: false,
+			expectedError:        errors.New("invalid id"),
+		},
+		{
+			name:   "task not found",
+			taskId: 999,
+			mockSetup: func(m *MockRepo) {
+				m.On("GetById", mock.Anything, 999).Return(nil, errors.New("invalid id"))
+			},
+			expectedNewTitle:     "",
+			expectedNewCompleted: false,
+			expectedError:        errors.New("invalid id"),
+		},
+		{
+			name:   "repo update failed",
+			taskId: 1,
+			params: params,
+			mockSetup: func(m *MockRepo) {
+				m.On("GetById", mock.Anything, 1).Return(task, nil)
+				m.On("Update", mock.Anything, 1, params).Return(nil, errors.New("repo error"))
+			},
+			expectedNewTitle:     "",
+			expectedNewCompleted: false,
+			expectedError:        errors.New("repo error"),
+		},
+	}
+
+	for _, scen := range tests {
+		t.Run(scen.name, func(t *testing.T) {
+			mockRepo := new(MockRepo)
+			scen.mockSetup(mockRepo)
+
+			svc := &TaskService{repo: mockRepo}
+
+			task, err := svc.EditTask(context.Background(), scen.taskId, scen.params)
+
+			if scen.expectedError != nil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, task.Title, scen.expectedNewTitle)
+				assert.Equal(t, task.Completed, scen.expectedNewCompleted)
+			}
+		})
+	}
+}
+
+func TestDeleteTask(t *testing.T) {
+	tests := []struct {
+		name          string
+		taskId        int
+		mockSetup     func(m *MockRepo)
+		expectedError error
+	}{
+		{
+			name:   "Happy path",
+			taskId: 1,
+			mockSetup: func(m *MockRepo) {
+				m.On("Delete", mock.Anything, 1).Return(nil)
+			},
+			expectedError: nil,
+		},
+		{
+			name:   "task not founc",
+			taskId: 99,
+			mockSetup: func(m *MockRepo) {
+				m.On("Delete", mock.Anything, 99).Return(errors.New("id not found"))
+			},
+			expectedError: errors.New("id not found"),
+		},
+		{
+			name:   "repo failure",
+			taskId: 1,
+			mockSetup: func(m *MockRepo) {
+				m.On("Delete", mock.Anything, 1).Return(errors.New("repo error"))
+			},
+			expectedError: errors.New("repo error"),
+		},
+	}
+
+	for _, scen := range tests {
+		t.Run(scen.name, func(t *testing.T) {
+			mockRepo := new(MockRepo)
+			scen.mockSetup(mockRepo)
+
+			svc := &TaskService{repo: mockRepo}
+
+			err := svc.DeleteTask(context.Background(), scen.taskId)
+			if scen.expectedError != nil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestMarkCompleted(t *testing.T) {
+	incompleteTask := &domain.Task{
+		ID:        1,
+		Title:     "Shopping",
+		Completed: false,
+		CreatedAt: time.Now().Add(-2 * time.Minute),
+		UpdatedAt: time.Now(),
+		Version:   0,
+	}
+	completedTask := &domain.Task{
+		ID:        2,
+		Title:     "Exercise",
+		Completed: true,
+		CreatedAt: time.Now().Add(-2 * time.Minute),
+		UpdatedAt: time.Now(),
+		Version:   0,
+	}
+
+	tests := []struct {
+		name              string
+		taskId            int
+		mockSetup         func(m *MockRepo)
+		expectedCompleted bool
+		expectedError     error
+	}{
+		{
+			name:   "Happy path",
+			taskId: 1,
+			mockSetup: func(m *MockRepo) {
+				m.On("GetById", mock.Anything, 1).Return(incompleteTask, nil)
+				m.On("MarkCompleted", mock.Anything, 1).Return(nil)
+			},
+			expectedCompleted: true,
+			expectedError:     nil,
+		},
+		{
+			name:   "task not found",
+			taskId: 99,
+			mockSetup: func(m *MockRepo) {
+				m.On("GetById", mock.Anything, 99).Return(nil, nil)
+				m.On("MarkCompleted", mock.Anything, 99).Return(errors.New("id not found"))
+			},
+			expectedCompleted: false,
+			expectedError:     errors.New("id not found"),
+		},
+		{
+			name:   "task already completed",
+			taskId: 2,
+			mockSetup: func(m *MockRepo) {
+				m.On("GetById", mock.Anything, 2).Return(completedTask, nil)
+				m.On("MarkCompleted", mock.Anything, 2).Return(errors.New("task already completed"))
+			},
+			expectedCompleted: true,
+			expectedError:     errors.New("task already completed"),
+		},
+		{
+			name:   "repo failure",
+			taskId: 1,
+			mockSetup: func(m *MockRepo) {
+				m.On("MarkCompleted", mock.Anything, 1).Return(errors.New("repo error"))
+			},
+			expectedCompleted: false,
+			expectedError:     errors.New("repo error"),
+		},
+	}
+
+	for _, scen := range tests {
+		t.Run(scen.name, func(t *testing.T) {
+			mockRepo := new(MockRepo)
+			scen.mockSetup(mockRepo)
+
+			svc := &TaskService{repo: mockRepo}
+
+			err := svc.repo.MarkCompleted(context.Background(), scen.taskId)
+			if scen.expectedError != nil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}

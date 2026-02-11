@@ -5,18 +5,26 @@ import (
 
 	db "github.com/ShoAnn/go-playground/todolist-api/internal/db/sqlc"
 	"github.com/ShoAnn/go-playground/todolist-api/internal/domain"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
-type postgresTaskRepository struct {
-	dbConn *pgxpool.Pool
-	q      *db.Queries
+// Define an interface that both *pgxpool.Pool and pgx.Tx satisfy
+type DBTX interface {
+	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
+	Query(context.Context, string, ...any) (pgx.Rows, error)
+	QueryRow(context.Context, string, ...any) pgx.Row
 }
 
-func NewTaskRepository(conn *pgxpool.Pool) domain.TaskRepository {
+type postgresTaskRepository struct {
+	db DBTX // Change this from *pgxpool.Pool
+	q  *db.Queries
+}
+
+func NewTaskRepository(conn DBTX) domain.TaskRepository {
 	return &postgresTaskRepository{
-		dbConn: conn,
-		q:      db.New(conn),
+		db: conn,
+		q:  db.New(conn), // sqlc's New works with anything satisfying DBTX
 	}
 }
 

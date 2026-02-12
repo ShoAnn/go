@@ -216,7 +216,7 @@ func TestCreate(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, int32(task.ID), createdTask.ID)
 				require.Equal(t, task.Completed, createdTask.Completed)
-				require.Equal(t, task.Version, int32(createdTask.Version))
+				require.EqualValues(t, task.Version, createdTask.Version)
 			},
 			expectErr: false,
 		},
@@ -238,6 +238,68 @@ func TestCreate(t *testing.T) {
 			}
 
 			q := db.New(tx)
+			tt.assert(t, q, task)
+		})
+	}
+}
+
+func TestUpdate(t *testing.T) {
+	ctx := context.Background()
+	tx, _ := testPool.Begin(ctx)
+	defer tx.Rollback(ctx)
+
+	newTitle := "Shopping Grocery"
+	newCompleted := true
+
+	tests := []struct {
+		name      string
+		params    *domain.UpdateTaskParams
+		seed      func(q *db.Queries) int32
+		assert    func(t *testing.T, q *db.Queries, task *domain.Task)
+		expectErr bool
+	}{
+		{
+			name: "Happy path",
+			params: &domain.UpdateTaskParams{
+				Title:     &newTitle,
+				Completed: &newCompleted,
+			},
+			seed: func(q *db.Queries) int32 {
+				task, err := q.CreateTask(ctx, db.CreateTaskParams{
+					Title: "Shopping",
+				})
+				require.NoError(t, err)
+				return task.ID
+			},
+			assert: func(t *testing.T, q *db.Queries, task *domain.Task) {
+				updatedTask, err := q.GetTask(ctx, int32(task.ID))
+				require.NoError(t, err)
+				require.Equal(t, int32(task.ID), updatedTask.ID)
+				require.Equal(t, task.Completed, updatedTask.Completed)
+				require.EqualValues(t, task.Version+1, updatedTask.Version)
+				require.NotEqualValues(t, task.UpdatedAt, updatedTask.UpdatedAt)
+			},
+			expectErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tx, err := testPool.Begin(ctx)
+			require.NoError(t, err)
+			defer tx.Rollback(ctx)
+
+			repo := NewTaskRepository(tx)
+
+			q := db.New(tx)
+			taskId := tt.seed(q)
+			task, err := repo.Update(ctx, int(taskId), tt.params)
+
+			if tt.expectErr {
+				require.Error(t, err)
+				return
+			}
+
 			tt.assert(t, q, task)
 		})
 	}

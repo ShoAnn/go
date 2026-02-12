@@ -2,10 +2,13 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/ShoAnn/go-playground/todolist-api/internal/domain"
+	"github.com/go-playground/validator/v10"
 )
 
 type TaskHandler struct {
@@ -40,7 +43,6 @@ func (h *TaskHandler) GetTask(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 	}
-	// sqlc generated this method!
 	// We pass r.Context() so if the user cancels the request, the DB stops working too.
 	task, err := h.service.GetTask(r.Context(), id)
 	if err != nil {
@@ -52,26 +54,22 @@ func (h *TaskHandler) GetTask(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(task)
 }
 
-func (h *TaskHandler) createTask(w http.ResponseWriter, r *http.Request) {
-	// create new instance of the resource struct
-	// request validation
-	// increment id
-	// lock > append > unlock
-	// write header
-	// write header and encode found data WEH
-	type request struct {
-		Title     string `json:"title"`
-		Completed bool   `json:"completed"`
+func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
+	var req domain.CreateTaskParams
+
+	validation := validator.New()
+	err := validation.Struct(req)
+	if err != nil {
+		errors := err.(validator.ValidationErrors)
+		http.Error(w, fmt.Sprint("Validation error: %s", errors), http.StatusBadRequest)
 	}
 
-	var req request
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 	}
 
 	task, err := h.service.CreateTask(r.Context(), &domain.CreateTaskParams{
-		Title:     req.Title,
-		Completed: req.Completed,
+		Title: req.Title,
 	})
 	if err != nil {
 		http.Error(w, "error creating task", http.StatusInternalServerError)
@@ -126,7 +124,7 @@ func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(updatedTask)
 }
 
-func (h *TaskHandler) deleteTask(w http.ResponseWriter, r *http.Request) {
+func (h *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 	// get id from url
 	// val (if id empty return msg to w)
 	// search data with the id (idiom use var found)

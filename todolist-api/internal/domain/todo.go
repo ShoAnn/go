@@ -15,8 +15,8 @@ type Task struct {
 }
 
 type CreateTaskParams struct {
-	Title     string
-	Completed bool
+	Title     string `json:"id" validate:"required,min=2"`
+	Completed bool   `json:"completed"`
 }
 
 type UpdateTaskParams struct {

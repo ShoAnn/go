@@ -281,6 +281,21 @@ func TestUpdate(t *testing.T) {
 			},
 			expectErr: false,
 		},
+		{
+			name: "id not found",
+			params: &domain.UpdateTaskParams{
+				Title:     &newTitle,
+				Completed: &newCompleted,
+			},
+			seed: func(q *db.Queries) int32 {
+				return -1
+			},
+			assert: func(t *testing.T, q *db.Queries, task *domain.Task) {
+				_, err := q.GetTask(ctx, int32(task.ID))
+				require.Error(t, err, pgx.ErrNoRows)
+			},
+			expectErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -301,6 +316,129 @@ func TestUpdate(t *testing.T) {
 			}
 
 			tt.assert(t, q, task)
+		})
+	}
+}
+
+func TestDelete(t *testing.T) {
+	ctx := context.Background()
+	tx, _ := testPool.Begin(ctx)
+	defer tx.Rollback(ctx)
+
+	tests := []struct {
+		name      string
+		seed      func(q *db.Queries) int32
+		assert    func(t *testing.T, q *db.Queries, id int32)
+		expectErr bool
+	}{
+		{
+			name: "Happy path",
+			seed: func(q *db.Queries) int32 {
+				task, err := q.CreateTask(ctx, db.CreateTaskParams{
+					Title: "Shopping",
+				})
+				require.NoError(t, err)
+				return task.ID
+			},
+			assert: func(t *testing.T, q *db.Queries, id int32) {
+				_, err := q.GetTask(ctx, id)
+				require.Error(t, err, pgx.ErrNoRows)
+			},
+			expectErr: false,
+		},
+		{
+			name: "id not found",
+			seed: func(q *db.Queries) int32 {
+				return -1
+			},
+			assert: func(t *testing.T, q *db.Queries, id int32) {
+				_, err := q.GetTask(ctx, id)
+				require.Error(t, err, pgx.ErrNoRows)
+			},
+			expectErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tx, err := testPool.Begin(ctx)
+			require.NoError(t, err)
+			defer tx.Rollback(ctx)
+
+			repo := NewTaskRepository(tx)
+
+			q := db.New(tx)
+			taskId := tt.seed(q)
+			err = repo.Delete(ctx, int(taskId))
+
+			if tt.expectErr {
+				require.Error(t, err)
+				return
+			}
+
+			tt.assert(t, q, taskId)
+		})
+	}
+}
+
+func TestMarkCompleted(t *testing.T) {
+	ctx := context.Background()
+	tx, _ := testPool.Begin(ctx)
+	defer tx.Rollback(ctx)
+
+	tests := []struct {
+		name      string
+		seed      func(q *db.Queries) int32
+		assert    func(t *testing.T, q *db.Queries, id int32)
+		expectErr bool
+	}{
+		{
+			name: "Happy path",
+			seed: func(q *db.Queries) int32 {
+				task, err := q.CreateTask(ctx, db.CreateTaskParams{
+					Title: "Shopping",
+				})
+				require.NoError(t, err)
+				return task.ID
+			},
+			assert: func(t *testing.T, q *db.Queries, id int32) {
+				updatedTask, err := q.GetTask(ctx, id)
+				require.NoError(t, err)
+				require.True(t, updatedTask.Completed)
+			},
+			expectErr: false,
+		},
+		{
+			name: "id not found",
+			seed: func(q *db.Queries) int32 {
+				return -1
+			},
+			assert: func(t *testing.T, q *db.Queries, id int32) {
+				_, err := q.GetTask(ctx, id)
+				require.Error(t, err, pgx.ErrNoRows)
+			},
+			expectErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tx, err := testPool.Begin(ctx)
+			require.NoError(t, err)
+			defer tx.Rollback(ctx)
+
+			repo := NewTaskRepository(tx)
+
+			q := db.New(tx)
+			taskId := tt.seed(q)
+			err = repo.MarkCompleted(ctx, int(taskId))
+
+			if tt.expectErr {
+				require.Error(t, err)
+				return
+			}
+
+			tt.assert(t, q, taskId)
 		})
 	}
 }

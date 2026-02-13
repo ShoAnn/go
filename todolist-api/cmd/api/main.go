@@ -34,12 +34,6 @@ func main() {
 		log.Fatalf("Database unreachable: %v", err)
 	}
 
-	// 4. Wrap the pool with sqlc
-	// database.New comes from the db.go file sqlc generated for you
-	queries := db.New(dbpool)
-	server := &Server{
-		Queries: queries,
-	}
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /tasks", server.getAllTasks)

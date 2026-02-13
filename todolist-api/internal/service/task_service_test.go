@@ -60,20 +60,20 @@ func TestListTasks(t *testing.T) {
 			expectedError: errors.New("repo error"),
 		},
 	}
-	for _, scen := range tests {
-		t.Run(scen.name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			mockRepo := new(MockRepo)
-			scen.mockSetup(mockRepo)
+			tc.mockSetup(mockRepo)
 
 			svc := &TaskService{repo: mockRepo}
 
 			tasks, err := svc.ListTasks(context.Background())
 
-			if scen.expectedError != nil {
+			if tc.expectedError != nil {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				assert.Len(t, tasks, scen.expectedCount)
+				assert.Len(t, tasks, tc.expectedCount)
 			}
 		})
 	}
@@ -130,19 +130,19 @@ func TestGetById(t *testing.T) {
 		},
 	}
 
-	for _, scen := range tests {
-		t.Run(scen.name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			mockRepo := new(MockRepo)
-			scen.mockSetup(mockRepo)
+			tc.mockSetup(mockRepo)
 
 			svc := &TaskService{repo: mockRepo}
 
-			task, err := svc.GetTask(context.Background(), scen.taskId)
-			if scen.expectedError != nil {
+			task, err := svc.GetTask(context.Background(), tc.taskId)
+			if tc.expectedError != nil {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				assert.Equal(t, task.Title, scen.expectedTitle)
+				assert.Equal(t, task.Title, tc.expectedTitle)
 			}
 		})
 	}
@@ -186,20 +186,20 @@ func TestCreateTask(t *testing.T) {
 		},
 	}
 
-	for _, scen := range tests {
-		t.Run(scen.name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			mockRepo := new(MockRepo)
-			scen.mockSetup(mockRepo)
+			tc.mockSetup(mockRepo)
 
 			svc := &TaskService{repo: mockRepo}
 
-			task, err := svc.CreateTask(context.Background(), scen.params)
+			task, err := svc.CreateTask(context.Background(), tc.params)
 
-			if scen.expectedError != nil {
+			if tc.expectedError != nil {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				assert.Equal(t, task.Title, scen.expectedTitle)
+				assert.Equal(t, task.Title, tc.expectedTitle)
 			}
 		})
 	}
@@ -284,21 +284,21 @@ func TestUpdateTask(t *testing.T) {
 		},
 	}
 
-	for _, scen := range tests {
-		t.Run(scen.name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			mockRepo := new(MockRepo)
-			scen.mockSetup(mockRepo)
+			tc.mockSetup(mockRepo)
 
 			svc := &TaskService{repo: mockRepo}
 
-			task, err := svc.EditTask(context.Background(), scen.taskId, scen.params)
+			task, err := svc.EditTask(context.Background(), tc.taskId, tc.params)
 
-			if scen.expectedError != nil {
+			if tc.expectedError != nil {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				assert.Equal(t, task.Title, scen.expectedNewTitle)
-				assert.Equal(t, task.Completed, scen.expectedNewCompleted)
+				assert.Equal(t, task.Title, tc.expectedNewTitle)
+				assert.Equal(t, task.Completed, tc.expectedNewCompleted)
 			}
 		})
 	}
@@ -337,15 +337,15 @@ func TestDeleteTask(t *testing.T) {
 		},
 	}
 
-	for _, scen := range tests {
-		t.Run(scen.name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			mockRepo := new(MockRepo)
-			scen.mockSetup(mockRepo)
+			tc.mockSetup(mockRepo)
 
 			svc := &TaskService{repo: mockRepo}
 
-			err := svc.DeleteTask(context.Background(), scen.taskId)
-			if scen.expectedError != nil {
+			err := svc.DeleteTask(context.Background(), tc.taskId)
+			if tc.expectedError != nil {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
@@ -420,15 +420,15 @@ func TestMarkCompleted(t *testing.T) {
 		},
 	}
 
-	for _, scen := range tests {
-		t.Run(scen.name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			mockRepo := new(MockRepo)
-			scen.mockSetup(mockRepo)
+			tc.mockSetup(mockRepo)
 
 			svc := &TaskService{repo: mockRepo}
 
-			err := svc.repo.MarkCompleted(context.Background(), scen.taskId)
-			if scen.expectedError != nil {
+			err := svc.repo.MarkCompleted(context.Background(), tc.taskId)
+			if tc.expectedError != nil {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)

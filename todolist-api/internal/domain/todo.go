@@ -30,8 +30,8 @@ type TaskService interface {
 	GetTask(ctx context.Context, id int) (*Task, error)
 	CreateTask(ctx context.Context, p *CreateTaskParams) (*Task, error)
 	CompleteTask(ctx context.Context, id int) error
-	Edit(ctx context.Context, id int, p *UpdateTaskParams) (*Task, error)
-	Delete(ctx context.Context, id int) error
+	EditTask(ctx context.Context, id int, p *UpdateTaskParams) (*Task, error)
+	DeleteTask(ctx context.Context, id int) error
 }
 
 type TaskRepository interface {

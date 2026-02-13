@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -61,7 +60,7 @@ func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	err := validation.Struct(req)
 	if err != nil {
 		errors := err.(validator.ValidationErrors)
-		http.Error(w, fmt.Sprint("Validation error: %s", errors), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("Validation error: %s", errors), http.StatusBadRequest)
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -110,7 +109,7 @@ func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updatedTask, err := h.service.Edit(r.Context(), id, &domain.UpdateTaskParams{
+	updatedTask, err := h.service.EditTask(r.Context(), id, &domain.UpdateTaskParams{
 		Title:     &req.Title,
 		Completed: &req.Completed,
 		Version:   req.Version,
@@ -143,7 +142,7 @@ func (h *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 	}
 
-	err = h.service.Delete(r.Context(), id)
+	err = h.service.DeleteTask(r.Context(), id)
 	if err != nil {
 		http.Error(w, "error deleting task", http.StatusInternalServerError)
 		return

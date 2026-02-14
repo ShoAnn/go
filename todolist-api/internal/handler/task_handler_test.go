@@ -4,27 +4,26 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/ShoAnn/go-playground/todolist-api/internal/domain"
+	"github.com/go-playground/validator/v10"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-func StructToReader(v interface{}) (io.Reader, error) {
-	// Encode the struct to a byte slice
-	b, err := json.Marshal(v)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal struct to JSON: %w", err)
-	}
-	// Return a new io.Reader from the byte slice
-	return bytes.NewReader(b), nil
-}
+// func StructToReader(v interface{}) (io.Reader, error) {
+// 	// Encode the struct to a byte slice
+// 	b, err := json.Marshal(v)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("failed to marshal struct to JSON: %w", err)
+// 	}
+// 	// Return a new io.Reader from the byte slice
+// 	return bytes.NewReader(b), nil
+// }
 
 func TestListTasks(t *testing.T) {
 	tasks := []*domain.Task{
@@ -128,6 +127,13 @@ func TestGetTask(t *testing.T) {
 			expectedStatus: http.StatusNotFound,
 			expectedBody:   "",
 		},
+		{
+			name:           "invalid id",
+			taskId:         "x",
+			mockSetup:      func(m *MockTaskService) {},
+			expectedStatus: http.StatusBadRequest,
+			expectedBody:   "",
+		},
 	}
 
 	for _, tc := range tests {
@@ -152,7 +158,6 @@ func TestGetTask(t *testing.T) {
 }
 
 func TestCreateTask(t *testing.T) {
-	createParams := &domain.CreateTaskParams{Title: "Shopping"}
 	task := &domain.Task{
 		ID:        1,
 		Title:     "Shopping",
@@ -164,17 +169,37 @@ func TestCreateTask(t *testing.T) {
 
 	tests := []struct {
 		name           string
+		inputBody      string
 		mockSetup      func(m *MockTaskService)
 		expectedStatus int
 		expectedTitle  string
 	}{
 		{
-			name: "Happy_path",
+			name:      "Happy_path",
+			inputBody: `{"title": "Shopping"}`,
 			mockSetup: func(m *MockTaskService) {
-				m.On("CreateTask", mock.Anything, createParams).Return(task, nil)
+				m.On("CreateTask", mock.Anything, mock.MatchedBy(func(p *domain.CreateTaskParams) bool {
+					return p.Title == "Shopping"
+				})).Return(task, nil)
 			},
 			expectedStatus: http.StatusCreated,
 			expectedTitle:  task.Title,
+		},
+		{
+			name:      "invalid inputBody",
+			inputBody: "this is not a json",
+			mockSetup: func(m *MockTaskService) {
+			},
+			expectedStatus: http.StatusBadRequest,
+			expectedTitle:  "",
+		},
+		{
+			name:      "invalid title",
+			inputBody: `{"title": ""}`,
+			mockSetup: func(m *MockTaskService) {
+			},
+			expectedStatus: http.StatusBadRequest,
+			expectedTitle:  "",
 		},
 	}
 
@@ -182,21 +207,101 @@ func TestCreateTask(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			mockService := new(MockTaskService)
 			tc.mockSetup(mockService)
-			h := &TaskHandler{service: mockService}
-			mux := http.NewServeMux()
-			mux.HandleFunc("POST /tasks", h.CreateTask)
-			reqBody, _ := StructToReader(createParams)
-			r := httptest.NewRequest("POST", "/tasks", reqBody)
+			h := &TaskHandler{service: mockService, validate: validator.New()}
+
+			r := httptest.NewRequest("POST", "/tasks", bytes.NewBuffer([]byte(tc.inputBody)))
+			r.Header.Set("Content-Type", "application/json")
 			w := httptest.NewRecorder()
 
-			// h.CreateTask(w, r)
-			mux.ServeHTTP(w, r)
+			h.CreateTask(w, r)
 
 			assert.Equal(t, tc.expectedStatus, w.Code)
 			if tc.expectedTitle != "" {
 				var task domain.Task
 				_ = json.Unmarshal([]byte(w.Body.Bytes()), &task)
 				assert.Equal(t, tc.expectedTitle, task.Title)
+			}
+		})
+	}
+}
+
+func TestUpdateTask(t *testing.T) {
+	task := &domain.Task{
+		ID:        1,
+		Title:     "Shopping Grocery",
+		Completed: true,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		Version:   1,
+	}
+	expectedBody_happy, _ := json.Marshal(task)
+
+	tests := []struct {
+		name           string
+		taskId         string
+		inputBody      string
+		mockSetup      func(m *MockTaskService)
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:      "Happy_path",
+			taskId:    "1",
+			inputBody: `{"title": "Shopping Grocery", "completed": true, "version": 0}`,
+			mockSetup: func(m *MockTaskService) {
+				m.On(
+					"EditTask",
+					mock.Anything,
+					1,
+					mock.Anything,
+				).Return(task, nil)
+			},
+			expectedStatus: http.StatusOK,
+			expectedBody:   string(expectedBody_happy),
+		},
+		{
+			name:           "invalid id",
+			taskId:         "x",
+			inputBody:      `{"title": "Shopping Grocery", "completed": "true"}`,
+			mockSetup:      func(m *MockTaskService) {},
+			expectedStatus: http.StatusBadRequest,
+			expectedBody:   "error",
+		},
+		{
+			name:           "invalid inputBody",
+			taskId:         "1",
+			inputBody:      "this is not a json",
+			mockSetup:      func(m *MockTaskService) {},
+			expectedStatus: http.StatusBadRequest,
+			expectedBody:   "error",
+		},
+		{
+			name:           "invalid title",
+			taskId:         "1",
+			inputBody:      `{"title": ""}`,
+			mockSetup:      func(m *MockTaskService) {},
+			expectedStatus: http.StatusBadRequest,
+			expectedBody:   "error",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			mockService := new(MockTaskService)
+			tc.mockSetup(mockService)
+			h := &TaskHandler{service: mockService, validate: validator.New()}
+
+			mux := http.NewServeMux()
+			mux.HandleFunc("PUT /tasks/{id}", h.UpdateTask)
+			r := httptest.NewRequest("PUT", "/tasks/"+tc.taskId, bytes.NewBuffer([]byte(tc.inputBody)))
+			r.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+
+			mux.ServeHTTP(w, r)
+
+			assert.Equal(t, tc.expectedStatus, w.Code)
+			if tc.expectedBody != "error" {
+				assert.JSONEq(t, tc.expectedBody, w.Body.String())
 			}
 		})
 	}

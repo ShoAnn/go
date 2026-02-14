@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -11,7 +12,8 @@ import (
 )
 
 type TaskHandler struct {
-	service domain.TaskService
+	service  domain.TaskService
+	validate *validator.Validate
 }
 
 func NewTaskHandler(s domain.TaskService) *TaskHandler {
@@ -41,6 +43,7 @@ func (h *TaskHandler) GetTask(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
 	}
 	// We pass r.Context() so if the user cancels the request, the DB stops working too.
 	task, err := h.service.GetTask(r.Context(), id)
@@ -54,21 +57,20 @@ func (h *TaskHandler) GetTask(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
-	var req domain.CreateTaskParams
-
-	validation := validator.New()
-	err := validation.Struct(req)
-	if err != nil {
-		errors := err.(validator.ValidationErrors)
-		http.Error(w, fmt.Sprintf("Validation error: %s", errors), http.StatusBadRequest)
+	var params domain.CreateTaskParams
+	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+	if err := h.validate.Struct(params); err != nil {
+		errors := err.(validator.ValidationErrors)
+		http.Error(w, fmt.Sprintf("Validation error: %s", errors), http.StatusBadRequest)
+		return
 	}
 
 	task, err := h.service.CreateTask(r.Context(), &domain.CreateTaskParams{
-		Title: req.Title,
+		Title: params.Title,
 	})
 	if err != nil {
 		http.Error(w, "error creating task", http.StatusInternalServerError)
@@ -97,22 +99,25 @@ func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
 	}
 
-	req := struct {
-		Title     string `json:"title,omitempty"`
-		Completed bool   `json:"completed,omitempty"`
-		Version   int    `json:"version"`
-	}{}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "error decoding request body ", http.StatusBadRequest)
+	var params domain.UpdateTaskParams
+	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
+		http.Error(w, "invalid request body ", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.validate.Struct(params); err != nil {
+		errors := err.(validator.ValidationErrors)
+		http.Error(w, fmt.Sprintf("Validation error: %s", errors), http.StatusBadRequest)
 		return
 	}
 
 	updatedTask, err := h.service.EditTask(r.Context(), id, &domain.UpdateTaskParams{
-		Title:     &req.Title,
-		Completed: &req.Completed,
-		Version:   req.Version,
+		Title:     params.Title,
+		Completed: params.Completed,
+		Version:   params.Version,
 	})
 	if err != nil {
 		http.Error(w, "error updating task", http.StatusInternalServerError)

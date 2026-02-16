@@ -1,2 +1,1 @@
-# go
-Collection of my go project
+# Projects i made to while learning Go

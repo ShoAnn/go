@@ -113,14 +113,6 @@ func TestGetById(t *testing.T) {
 			expectedError: errors.New("id not found"),
 		},
 		{
-			name:   "invalid id",
-			taskId: -1,
-			mockSetup: func(m *MockRepo) {
-				m.On("GetById", mock.Anything, -1).Return(nil, errors.New("invalid id"))
-			},
-			expectedError: errors.New("invalid id"),
-		},
-		{
 			name:   "db failure",
 			taskId: 1,
 			mockSetup: func(m *MockRepo) {

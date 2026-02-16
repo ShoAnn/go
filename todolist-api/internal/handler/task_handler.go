@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 
@@ -128,6 +127,36 @@ func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(updatedTask)
 }
 
+func (h *TaskHandler) CompleteTask(w http.ResponseWriter, r *http.Request) {
+	// get id from url
+	// val (if id empty return msg to w)
+	// declare new instance of the resource struct for the edited data
+	// search data with the id (idiom use var found)
+	// if empty return
+	// send service
+	// write header and encode found data WEH
+
+	idStr := r.PathValue("id")
+	if idStr == "" {
+		http.Error(w, "id cannot empty", http.StatusBadRequest)
+		return
+	}
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	err = h.service.CompleteTask(r.Context(), id)
+
+	if err != nil {
+		http.Error(w, "error updating task", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (h *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 	// get id from url
 	// val (if id empty return msg to w)
@@ -145,6 +174,7 @@ func (h *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
 	}
 
 	err = h.service.DeleteTask(r.Context(), id)

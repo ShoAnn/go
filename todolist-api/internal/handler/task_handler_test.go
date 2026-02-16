@@ -306,3 +306,85 @@ func TestUpdateTask(t *testing.T) {
 		})
 	}
 }
+
+func TestCompleteTask(t *testing.T) {
+	tests := []struct {
+		name           string
+		taskId         string
+		mockSetup      func(m *MockTaskService)
+		expectedStatus int
+	}{
+		{
+			name:   "Happy_path",
+			taskId: "1",
+			mockSetup: func(m *MockTaskService) {
+				m.On("CompleteTask", mock.Anything, 1).Return(nil)
+			},
+			expectedStatus: http.StatusNoContent,
+		},
+		{
+			name:           "invalid id",
+			taskId:         "x",
+			mockSetup:      func(m *MockTaskService) {},
+			expectedStatus: http.StatusBadRequest,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			mockService := new(MockTaskService)
+			tc.mockSetup(mockService)
+			h := &TaskHandler{service: mockService, validate: validator.New()}
+
+			mux := http.NewServeMux()
+			mux.HandleFunc("PATCH /tasks/{id}", h.CompleteTask)
+			r := httptest.NewRequest("PATCH", "/tasks/"+tc.taskId, nil)
+			w := httptest.NewRecorder()
+
+			mux.ServeHTTP(w, r)
+
+			assert.Equal(t, tc.expectedStatus, w.Code)
+		})
+	}
+}
+
+func TestDelete(t *testing.T) {
+	tests := []struct {
+		name           string
+		taskId         string
+		mockSetup      func(m *MockTaskService)
+		expectedStatus int
+	}{
+		{
+			name:   "Happy_path",
+			taskId: "1",
+			mockSetup: func(m *MockTaskService) {
+				m.On("DeleteTask", mock.Anything, 1).Return(nil)
+			},
+			expectedStatus: http.StatusNoContent,
+		},
+		{
+			name:           "invalid id",
+			taskId:         "x",
+			mockSetup:      func(m *MockTaskService) {},
+			expectedStatus: http.StatusBadRequest,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			mockService := new(MockTaskService)
+			tc.mockSetup(mockService)
+			h := &TaskHandler{service: mockService, validate: validator.New()}
+
+			mux := http.NewServeMux()
+			mux.HandleFunc("DELETE /tasks/{id}", h.DeleteTask)
+			r := httptest.NewRequest("DELETE", "/tasks/"+tc.taskId, nil)
+			w := httptest.NewRecorder()
+
+			mux.ServeHTTP(w, r)
+
+			assert.Equal(t, tc.expectedStatus, w.Code)
+		})
+	}
+}

@@ -15,14 +15,14 @@ type Task struct {
 }
 
 type CreateTaskParams struct {
-	Title     string `json:"id" validate:"required,min=2"`
+	Title     string `json:"title" validate:"required,min=2"`
 	Completed bool   `json:"completed"`
 }
 
 type UpdateTaskParams struct {
-	Title     *string // pointer here means this field is optional for updates meaning it becomes nil if not mentioned
-	Completed *bool
-	Version   int
+	Title     *string `json:"title" validate:"omitempty,min=2"` // pointer here means this field is optional for updates meaning it becomes nil if not mentioned
+	Completed *bool   `json:"completed"`
+	Version   int     `json:"version" validate:"isdefault|required"`
 }
 
 type TaskService interface {

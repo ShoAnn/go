@@ -1,1 +1,1 @@
-# Projects i made to while learning Go
+# Projects i made while learning Go

@@ -1,7 +1,6 @@
 # Things i've learn from this project
 
 - Structs, slices, maps, methods
-- Parsing command-line arguments from user input
 - [cobra](https://github.com/spf13/cobra) cli library
 - CLI app command flows
 - read, validate and handling inputs

@@ -11,6 +11,12 @@ type TaskService struct {
 	repo domain.TaskRepository
 }
 
+func NewTaskService(repo domain.TaskRepository) domain.TaskService {
+	return &TaskService{
+		repo: repo,
+	}
+}
+
 func (s *TaskService) ListTasks(ctx context.Context) ([]*domain.Task, error) {
 	taskList, err := s.repo.GetAll(ctx)
 	if err != nil {

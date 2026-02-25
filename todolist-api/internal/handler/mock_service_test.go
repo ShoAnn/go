@@ -3,7 +3,7 @@ package handler
 import (
 	"context"
 
-	"github.com/ShoAnn/go-playground/todolist-api/internal/domain"
+	"github.com/ShoAnn/go/todolist-api/internal/domain"
 	"github.com/stretchr/testify/mock"
 )
 

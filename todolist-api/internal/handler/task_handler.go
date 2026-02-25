@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/ShoAnn/go-playground/todolist-api/internal/domain"
+	"github.com/ShoAnn/go/todolist-api/internal/domain"
 	"github.com/go-playground/validator/v10"
 )
 
@@ -16,7 +16,10 @@ type TaskHandler struct {
 }
 
 func NewTaskHandler(s domain.TaskService) *TaskHandler {
-	return &TaskHandler{service: s}
+	return &TaskHandler{
+		service:  s,
+		validate: validator.New(),
+	}
 }
 
 func (h *TaskHandler) ListTasks(w http.ResponseWriter, r *http.Request) {
@@ -69,7 +72,8 @@ func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	task, err := h.service.CreateTask(r.Context(), &domain.CreateTaskParams{
-		Title: params.Title,
+		Title:     params.Title,
+		Completed: params.Completed,
 	})
 	if err != nil {
 		http.Error(w, "error creating task", http.StatusInternalServerError)

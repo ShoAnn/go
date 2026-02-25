@@ -3,8 +3,8 @@ package repository
 import (
 	"context"
 
-	db "github.com/ShoAnn/go-playground/todolist-api/internal/db/sqlc"
-	"github.com/ShoAnn/go-playground/todolist-api/internal/domain"
+	db "github.com/ShoAnn/go/todolist-api/internal/db/sqlc"
+	"github.com/ShoAnn/go/todolist-api/internal/domain"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 )

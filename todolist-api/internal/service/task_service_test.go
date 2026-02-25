@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ShoAnn/go-playground/todolist-api/internal/domain"
+	"github.com/ShoAnn/go/todolist-api/internal/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )

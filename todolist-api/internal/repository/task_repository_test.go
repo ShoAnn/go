@@ -12,8 +12,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	db "github.com/ShoAnn/go-playground/todolist-api/internal/db/sqlc"
-	"github.com/ShoAnn/go-playground/todolist-api/internal/domain"
+	db "github.com/ShoAnn/go/todolist-api/internal/db/sqlc"
+	"github.com/ShoAnn/go/todolist-api/internal/domain"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 )

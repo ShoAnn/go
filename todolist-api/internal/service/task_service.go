@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/ShoAnn/go-playground/todolist-api/internal/domain"
+	"github.com/ShoAnn/go/todolist-api/internal/domain"
 )
 
 type TaskService struct {

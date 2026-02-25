@@ -2,14 +2,13 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
 
-	"github.com/ShoAnn/go-playground/todolist-api/internal/handler"
-	"github.com/ShoAnn/go-playground/todolist-api/internal/repository"
-	"github.com/ShoAnn/go-playground/todolist-api/internal/service"
+	"github.com/ShoAnn/go/todolist-api/internal/handler"
+	"github.com/ShoAnn/go/todolist-api/internal/repository"
+	"github.com/ShoAnn/go/todolist-api/internal/service"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 )
@@ -21,10 +20,7 @@ func main() {
 	// define routes
 	// start server
 	ctx := context.Background()
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
+	_ = godotenv.Load()
 
 	dbpool, err := pgxpool.New(ctx, os.Getenv("POSTGRES_URL"))
 	if err != nil {
@@ -47,8 +43,8 @@ func main() {
 	mux.HandleFunc("PATCH /tasks/{id}", taskHandler.CompleteTask)
 	mux.HandleFunc("DELETE /tasks/{id}", taskHandler.DeleteTask)
 
-	log.Println("Starting server...")
-	if err := http.ListenAndServe("localhost:8090", mux); err != nil {
-		fmt.Println(err.Error())
+	log.Println("Server is running on port 8080...")
+	if err := http.ListenAndServe(":8080", mux); err != nil {
+		log.Fatal(err.Error())
 	}
 }
